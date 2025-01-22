@@ -12,51 +12,40 @@ public class ServerListenerThread extends Thread{
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerListenerThread.class);
 
-    private static int port;
-    private static String webRoot;
+    private int port;
+    private  String webRoot;
 
-    private static ServerSocket serverSocket;
+    private ServerSocket serverSocket;
 
     private static final String CLRF = "\n\r";
 
     public ServerListenerThread(int port, String webRoot) throws IOException {
-        ServerListenerThread.port = port;
-        ServerListenerThread.webRoot = webRoot;
-        ServerListenerThread.serverSocket = new ServerSocket(port);
+        this.port = port;
+        this.webRoot = webRoot;
+        this.serverSocket = new ServerSocket(port);
     }
     @Override
     public void run() {
         try {
 //            ServerSocket serverSocket = new ServerSocket(port);
-
-            LOGGER.info("A new client has connected");
-//            while(serverSocket.isBound() && !serverSocket.isClosed()){
-//                HttpClientWorkerThread httpClientWorkerThread = new HttpClientWorkerThread(socket);
-//                httpClientWorkerThread.start();
-//            }
+//            Socket socket = serverSocket.accept(); // Initializing socket here will result, the serverSocket.accept() to not listen to the port for the 2nd time as the code never reaches here.
             while(serverSocket.isBound() && !serverSocket.isClosed()){
-                Socket socket = serverSocket.accept();
-//                InputStreamReader inputStreamReader = new InputStreamReader(socket.getInputStream());
-//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
-//                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-//                BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
-                OutputStream outputStream = socket.getOutputStream();
-                String html = "<html><head><title>Simple Http Java Server</title></head><body><h1>This page was served using my Simple Http Java Server</h1></body></html>";
-                String response = "HTTP/1.1 200 OK" + CLRF // Status Line
-                        + "Content-Length: " + html.getBytes().length + CLRF //Header
-                        + CLRF
-                        + html
-                        + CLRF + CLRF;
-                outputStream.write(response.getBytes());
-//                bufferedWriter.write(response);
-//                bufferedWriter.flush();
-//                bufferedReader.close();
-//                bufferedWriter.close();
-                socket.close();
+                Socket socket = serverSocket.accept(); // It will continue to listen as long as the serverSocket is not closed.
+                LOGGER.info("A new client has connected");
+                HttpClientWorkerThread httpClientWorkerThread = new HttpClientWorkerThread(socket);
+                httpClientWorkerThread.start();
+//                socket.close(); we are not closing the socket here , because as soon as the httpclientworkerthread starts it's execution, the socket.close() is also called in parallel and hence the socket is closed before a response could be sent
             }
-//            socket.close();
         }catch (Exception e){
             e.printStackTrace();
+        }finally {
+            if(serverSocket != null){
+                try {
+                    serverSocket.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 }
